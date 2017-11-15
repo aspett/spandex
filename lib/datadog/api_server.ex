@@ -7,7 +7,7 @@ defmodule Spandex.Datadog.ApiServer do
 
   require Logger
 
-  defstruct [:http, :url, :host, :port, :endpoint, :channel, :verbose]
+  defstruct [:http, :url, :host, :port, :endpoint, :channel, :verbose, :batch_size, :waiting_spans]
 
   @type t :: %__MODULE__{}
 
@@ -32,6 +32,8 @@ defmodule Spandex.Datadog.ApiServer do
       channel:  Keyword.get(args, :channel),
       verbose:  Keyword.get(args, :log_traces?, false),
       http:     Keyword.get(args, :http, HTTPoison),
+      waiting_spans: [],
+      batch_size: Keyword.get(args, :batch_size, 1000)
     }
 
     {:ok, state}
@@ -47,24 +49,30 @@ defmodule Spandex.Datadog.ApiServer do
 
   @doc false
   @spec handle_cast({:send_spans, spans :: list(map)}, state :: t) :: {:noreply, t}
-  def handle_cast({:send_spans, spans}, %__MODULE__{verbose: verbose} = state) do
+  def handle_cast({:send_spans, spans}, %__MODULE__{verbose: verbose, waiting_spans: waiting_spans, batch_size: batch_size} = state) do
     if verbose do
       Logger.info  fn -> "Processing trace with #{Enum.count(spans)} spans" end
       Logger.debug fn -> "Trace: #{inspect([spans])}" end
     end
 
-    response =
-      [spans]
-      |> encode()
-      |> push(state)
+    total_span_count = Enum.count(spans) + Enum.count(waiting_spans)
 
-    if verbose do
-      Logger.debug fn -> "Trace response: #{inspect(response)}" end
+    if total_span_count >= batch_size do
+      response =
+        [spans ++ waiting_spans]
+        |> encode()
+        |> push(state)
+
+      if verbose do
+        Logger.debug fn -> "Trace response: #{inspect(response)}" end
+      end
+
+      broadcast(spans, state)
+
+      {:noreply, %{state | waiting_spans: []}}
+    else
+      {:noreply, %{state | waiting_spans: waiting_spans ++ spans}}
     end
-
-    broadcast(spans, state)
-
-    {:noreply, state}
   end
 
   @spec broadcast(spans :: list(map), t) :: any
