@@ -33,7 +33,7 @@ defmodule Spandex.Datadog.ApiServer do
       verbose:  Keyword.get(args, :log_traces?, false),
       http:     Keyword.get(args, :http, HTTPoison),
       waiting_spans: [],
-      batch_size: Keyword.get(args, :batch_size, 1000)
+      batch_size: Keyword.get(args, :batch_size, 1)
     }
 
     {:ok, state}
@@ -55,6 +55,8 @@ defmodule Spandex.Datadog.ApiServer do
       Logger.debug fn -> "Trace: #{inspect([spans])}" end
     end
 
+    spans = spans || []
+    waiting_spans = waiting_spans || []
     total_span_count = Enum.count(spans) + Enum.count(waiting_spans)
 
     if total_span_count >= batch_size do

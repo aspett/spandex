@@ -28,7 +28,7 @@ defmodule Spandex.Datadog.ApiServerTest do
       [
         spans: [%{"foo" => "bar"}, %{"baz" => "maz"}],
         url: "localhost:8126/v0.3/traces",
-        state: %ApiServer{host: "localhost", port: "8126", http: TestOkApiServer, verbose: false},
+        state: %ApiServer{host: "localhost", port: "8126", http: TestOkApiServer, verbose: false, waiting_spans: [], batch_size: 1},
       ]
     }
   end
@@ -44,6 +44,8 @@ defmodule Spandex.Datadog.ApiServerTest do
           channel: nil,
           verbose: false,
           http: HTTPoison,
+          waiting_spans: [],
+          batch_size: 1
         }
       }
     end
@@ -57,6 +59,7 @@ defmodule Spandex.Datadog.ApiServerTest do
         |> Keyword.put(:endpoint, TestBroadcast)
         |> Keyword.put(:channel, "test_channel")
         |> Keyword.put(:http, TestOkApiServer)
+        |> Keyword.put(:batch_size, 2000)
 
       assert ApiServer.init(dd_conf) == {
         :ok,
@@ -67,6 +70,8 @@ defmodule Spandex.Datadog.ApiServerTest do
           channel: "test_channel",
           verbose: true,
           http: TestOkApiServer,
+          batch_size: 2000,
+          waiting_spans: []
         }
       }
     end
