@@ -11,10 +11,12 @@ View the [documentation](https://hexdocs.pm/spandex)
 
 Spandex is a platform agnostic tracing library. Currently there is only a datadog APM adapter, but its designed to be able to have more adapters written for it.
 
+Version 1.2.0 included a change that can have very positive effects on the performance of spandex in your application. It is highly recommended that you switch to it.
+
 ## Installation
 ```elixir
 def deps do
-  [{:spandex, "~> 1.1.2"}]
+  [{:spandex, "~> 1.2.0"}]
 end
 ```
 ## Warning
